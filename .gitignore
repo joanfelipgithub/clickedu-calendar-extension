@@ -1,0 +1,7 @@
+# Personal notes
+5s on git.txt
+*.txt
+
+# System files
+.DS_Store
+Thumbs.db
