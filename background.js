@@ -1,13 +1,15 @@
-// Track which tabs have shown the overlay in this session
-const shownTabs = new Set();
-
 // Listen for tab updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url && tab.url.includes('insscf.clickedu.eu/sumari/index.php')) {
-        // Check if we've already shown the overlay for this tab
-        if (!shownTabs.has(tabId)) {
-            // Mark this tab as shown
-            shownTabs.add(tabId);
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' &&
+        tab.url &&
+        tab.url.includes('insscf.clickedu.eu/sumari/index.php')) {
+
+        // Check if overlay has been shown this session
+        const result = await chrome.storage.session.get('overlayShown');
+
+        if (!result.overlayShown) {
+            // Mark as shown for this entire browser session
+            await chrome.storage.session.set({ overlayShown: true });
 
             // Send message to content script to show overlay
             chrome.tabs.sendMessage(tabId, { action: 'showOverlay' });
@@ -15,12 +17,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
 });
 
-// Clean up when tabs are closed
-chrome.tabs.onRemoved.addListener((tabId) => {
-    shownTabs.delete(tabId);
-});
+// Optional: Reset when user logs out
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' &&
+        tab.url &&
+        (tab.url.includes('logout') || tab.url.includes('tancar'))) {
 
-// Reset on browser startup (new session)
-chrome.runtime.onStartup.addListener(() => {
-    shownTabs.clear();
+        // Clear the flag so overlay shows on next login
+        await chrome.storage.session.remove('overlayShown');
+    }
 });
